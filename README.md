@@ -18,9 +18,6 @@ Replace this paragraph with your own summary of what your version does.
 ## How The System Works
 
 Explain your design in plain language.
-
-Some prompts to answer:
-
 - What features does each `Song` use in your system
   - For example: genre, mood, energy, tempo
 - What information does your `UserProfile` store
@@ -28,6 +25,78 @@ Some prompts to answer:
 - How do you choose which songs to recommend
 
 You can include a simple diagram or bullet list if helpful.
+
+
+My recommendation sytem uses four features:
+1. genre 
+2. mood (defines the emotional experience )
+3. energy
+4. acousticness
+
+The reasoning for weight as follows:
+Genre (3.0) is the coarsest filter. 
+The system assumes that a person would choose genre regardless of energy or mood. For example . Some one that listen soft rock or jazz music frequenlty music would rarely listen hip-hop or metal song regardless of the enrgy and mood. 
+
+Mood (2.0) is Second most defining after genre. A "happy" song and a "moody" song feel fundamentally different even in the same genre.
+
+Energy (1.5) — continuous and context-critical 
+When you are at the gym, you want to listen to high-energy songs. On the other hand, when you study, you prefer low-energy songs. However, within a session at the gym or during study time, you might tolerate some variance in these energy levels. Thus, the energy feature is continuous (not binary), requiring a smooth transition where the system picks songs with a similar 'vibe' rather than jumping abruptly between different levels.
+
+Acousticness (1.0) is a low-priority texture preference. It represents the choice between Organic (acoustic) and Electronic (synthetic) sounds, based on the assumption that the 'instrument feel' is less important to the listener than the Genre or the Energy of the song.
+
+Based on these four features , the system calculte a maximum score of 7.5 when everything matches perfectly.
+Max score = 7.5 (3.0 + 2.0 + 1.5 + 1.0 )
+
+For genre and mood features
+A binary score is used. If the genre doesn't match, the score drops significantly because the weight is high (3.0).
+
+For continuous features (energy, acousticness), instead of linear 1 - |diff| ,use a Gaussian/RBF kernel:
+sim(x, y) = exp(-(x - y)² / (2σ²)).
+
+Why Gaussian 
+ Linear penalizes all gaps equally — a song 0.1 away loses as much per unit as one 0.5 away. 
+ The Gaussian function produces a bell curve providing smooth transition. The closer the song is to the choosen target energy, the more points it gets.Therefore, Gaussian is more realistic; small differences barely matter, large differences are heavily penalized. It also never goes negative.
+ 
+ 
+Ex:
+With σ=0.25: a song 0.1 away scores 0.92, a song 0.25 away scores 0.61, a song 0.5 away scores 0.14. Natural, smooth decay — rewards songs close to preference rather than just "any direction."
+
+Summary of the scoring rule
+## Scoring Rule (Max Score = 7.5)
+
+| Feature | Type | Weight | Method |
+| :--- | :--- | :--- | :--- |
+| **Genre** | Binary | 3.0 | Exact match → full points or 0 |
+| **Mood** | Binary | 2.0 | Exact match → full points or 0 |
+| **Energy** | Continuous | 1.5 | Gaussian: $e^{-\frac{(x-y)^2}{2\sigma^2}}$, where $\sigma=0.25$ |
+| **Acousticness** | Continuous | 1.0 | Same Gaussian, target = 1.0 or 0.0 |
+
+###
+Song object
+
+| Field | Type | Used in scoring? |
+| :--- | :--- | :--- |
+| **id** | int | No — identifier only |
+| **title** | str | No — display only |
+| **artist** | str | No — display only |
+| **genre** | str | Yes — matched against user preference |
+| **mood** | str | Yes — matched against user preference |
+| **energy** | float | Yes — Gaussian similarity against target |
+| **tempo_bpm** | float | No — loaded but never scored |
+| **valence** | float | No — loaded but never scored |
+| **danceability** | float | No — loaded but never scored |
+| **acousticness** | float | Yes — Gaussian similarity against target |
+
+UserProfile object
+| Field | Type | Used in scoring? |
+| :--- | :--- | :--- |
+| **favorite_genre** | str | Yes — binary match against song.genre |
+| **favorite_mood** | str | Yes — binary match against song.mood |
+| **target_energy** | float | Yes — target for Gaussian similarity |
+| **likes_acoustic** | bool | Yes — maps to 1.0 or 0.0, then Gaussian similarity |
+
+
+
 
 ---
 

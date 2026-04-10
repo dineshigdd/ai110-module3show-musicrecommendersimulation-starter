@@ -16,7 +16,6 @@ Replace this paragraph with your own summary of what your version does.
 ---
 
 ## How The System Works
-
 Explain your design in plain language.
 - What features does each `Song` use in your system
   - For example: genre, mood, energy, tempo
@@ -26,7 +25,29 @@ Explain your design in plain language.
 
 You can include a simple diagram or bullet list if helpful.
 
+### How does real-world recommendations works in Streaming Platforms
+Streaming Platforms broadly uses two techniques of recommendation systems
+1. Collaborative Filtering
+    - Uses other users’ behavior
+    - ex: If users similar to you love a song you haven’t heard → recommend it
+2. Content-Based Filtering
+    - Uses attributes of the content itself
+    - ex: If you like slow acoustic songs → recommend similar songs (tempo, genre, mood)
 
+Modern platforms combine both methods and AI models:
+- Deep learning (neural networks)
+- Natural language processing (for titles, comments, descriptions)
+- Audio analysis (tempo, pitch, energy)
+
+And Continuous Feedback Loop make sure that every interaction updates your profile. If you:
+Skip a song = negative signal
+Replay a song = strong positive signal
+Like/save a song = explicit preference
+
+This improves the recommendation systems with real time data.
+
+
+### How My system works
 My recommendation sytem uses four features:
 1. genre 
 2. mood (defines the emotional experience )
@@ -96,8 +117,35 @@ UserProfile object
 | **likes_acoustic** | bool | Yes — maps to 1.0 or 0.0, then Gaussian similarity |
 
 
+### Comparrion between real-world recommedation system and this system
+| Feature | This System | Real-world |
+| :--- | :--- | :--- |
+| **Data source** | Hand-picked attributes (genre, mood) | Billions of implicit signals (play-throughs, skips, repeat plays, time of day) |
+| **Method** | Content-based filtering | Collaborative filtering + content + deep learning |
+| **User model** | Static profile dict | Continuously updated from behavior |
+| **What "similar" means** | Feature distance | Users who listen like you also liked this |
+| **Cold start** | Works immediately | Needs listening history to work well |
 
 
+#### Limitation of this system
+- **human-assigned and sparse labels**
+The labels are human-assigned and sparse. For example,
+genre = "lofi", mood = "happy". Real systems infer these implicitly from
+behavior at scale — if 90% of listeners play a song at 1am on weekdays,
+the system classifies it as "chill" without anyone labeling it. 
+
+- **Not teachable** 
+The system is does not use any teachable models,which means the system cannot improve from user feedback (weights (genre=3.0, mood=2.0, etc.) are hand-coded constants. ).
+
+- **Static user profile** 
+  User preferences never update. Skipping or replaying  songs has no effect on future recommendations.
+
+- **No diversity control** — if five songs all share the same genre, all five get recommended even if they sound nearly identical.
+
+- **Tiny catalog** — 10 songs. Real systems operate on millions.
+
+- **Unused features** — tempo_bpm, valence, and danceability are loaded
+  but never scored, leaving signal on the table.
 ---
 
 ## Getting Started

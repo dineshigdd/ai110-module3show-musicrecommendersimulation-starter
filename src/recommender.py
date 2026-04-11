@@ -3,16 +3,28 @@ import math
 from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass, asdict
 
-# Scoring weights — justify every number:
-#   Genre (3.0): broadest filter; a jazz listener rarely wants a metal song
-#   Mood  (2.0): defines emotional experience, second most fundamental
-#   Energy(1.5): context-critical but continuous — smooth decay beats binary
-#   Acousticness(1.0): texture preference, real but least defining
-# Max possible score = 3.0 + 2.0 + 1.5 + 1.0 = 7.5
-WEIGHT_GENRE       = 3.0
-WEIGHT_MOOD        = 2.0
-WEIGHT_ENERGY      = 1.5
+# Scoring weights — updated for expanded 18-song catalog:
+#   Genre (2.0):       Still the top filter but reduced from 3.0 — 13 of 15
+#                      genres have only 1 song, so a 3.0 weight turned the
+#                      recommender into a lookup table for most users.
+#   Mood  (2.5):       Raised above genre — expanded moods (lonely, anxious,
+#                      dreamy, mysterious) are now emotionally specific enough
+#                      to be the strongest differentiating signal.
+#   Energy(2.0):       Raised from 1.5 — catalog spread is 0.28–0.95,
+#                      Gaussian now has real room to discriminate.
+#   Acousticness(1.0): Unchanged — still least defining texture preference.
+#   Tempo (0.5):       New — 60–168 BPM spread is large enough to add signal;
+#                      half-weight keeps it from dominating.
+# Max possible score = 2.0 + 2.5 + 2.0 + 1.0 + 0.5 = 8.0
+WEIGHT_GENRE        = 2.0
+WEIGHT_MOOD         = 2.5
+WEIGHT_ENERGY       = 2.0
 WEIGHT_ACOUSTICNESS = 1.0
+WEIGHT_TEMPO        = 0.5
+
+# Tempo normalization range (BPM → [0, 1] before Gaussian)
+TEMPO_MIN = 60
+TEMPO_MAX = 180
 
 def _gaussian_sim(x: float, y: float, sigma: float = 0.25) -> float:
     """
@@ -51,6 +63,7 @@ class UserProfile:
     favorite_mood: str
     target_energy: float
     likes_acoustic: bool
+    target_tempo: Optional[float] = None  # BPM; optional for backwards compatibility
 
 
 def load_songs(csv_path: str) -> List[Dict]:
@@ -58,6 +71,7 @@ def load_songs(csv_path: str) -> List[Dict]:
     Loads songs from a CSV file.
     Required by src/main.py
     """
+    print(f"Loading songs from {csv_path}...")
     songs = []
     with open(csv_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -74,6 +88,8 @@ def load_songs(csv_path: str) -> List[Dict]:
                 "danceability": float(row["danceability"]),
                 "acousticness": float(row["acousticness"]),
             })
+    
+    print(f"Loaded songs: {len(songs)}")
     return songs
 
 
@@ -87,7 +103,7 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
     songs that happen to be high or low.
 
     Returns (score, reasons):
-      score   — float in [0, 7.5]; higher is a better match
+      score   — float in [0, 8.0]; higher is a better match
       reasons — human-readable explanation of what matched
     """
     score = 0.0
@@ -97,23 +113,24 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
     # Heaviest weight: genre defines the fundamental sound palette.
     if song["genre"].lower() == user_prefs.get("genre", "").lower():
         score += WEIGHT_GENRE
-        reasons.append(f"genre matches ({song['genre']})")
+        reasons.append(f"genre matches ({song['genre']})  +{WEIGHT_GENRE:.1f}")
 
-    # --- Mood: binary match, weight 2.0 ---
+    # --- Mood: binary match, weight 2.5 ---
     # Second heaviest: mood defines emotional experience within a genre.
     if song["mood"].lower() == user_prefs.get("mood", "").lower():
         score += WEIGHT_MOOD
-        reasons.append(f"mood matches ({song['mood']})")
+        reasons.append(f"mood matches ({song['mood']})  +{WEIGHT_MOOD:.1f}")
 
-    # --- Energy: Gaussian similarity, weight 1.5 ---
+    # --- Energy: Gaussian similarity, weight 2.0 ---
     # Continuous [0, 1]. Gaussian rewards proximity — a song 0.1 away
     # scores ~0.92×, a song 0.5 away scores ~0.14×.
     energy_sim = _gaussian_sim(song["energy"], user_prefs.get("energy", 0.5))
-    score += WEIGHT_ENERGY * energy_sim
+    energy_pts = WEIGHT_ENERGY * energy_sim
+    score += energy_pts
     if energy_sim >= 0.90:
-        reasons.append(f"energy is an excellent match ({song['energy']:.2f})")
+        reasons.append(f"energy is an excellent match ({song['energy']:.2f})  +{energy_pts:.2f}")
     elif energy_sim >= 0.60:
-        reasons.append(f"energy is near your preference ({song['energy']:.2f})")
+        reasons.append(f"energy is near your preference ({song['energy']:.2f})  +{energy_pts:.2f}")
 
     # --- Acousticness: Gaussian similarity, weight 1.0 ---
     # Map bool preference to a target in [0, 1], then apply same kernel.
@@ -121,11 +138,27 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
     if likes_acoustic is not None:
         target_ac = 1.0 if likes_acoustic else 0.0
         ac_sim = _gaussian_sim(song["acousticness"], target_ac)
-        score += WEIGHT_ACOUSTICNESS * ac_sim
+        ac_pts = WEIGHT_ACOUSTICNESS * ac_sim
+        score += ac_pts
         if ac_sim >= 0.90:
-            reasons.append(f"acousticness is exactly what you prefer ({song['acousticness']:.2f})")
+            reasons.append(f"acousticness is exactly what you prefer ({song['acousticness']:.2f})  +{ac_pts:.2f}")
         elif ac_sim >= 0.60:
-            reasons.append(f"acousticness fits your taste ({song['acousticness']:.2f})")
+            reasons.append(f"acousticness fits your taste ({song['acousticness']:.2f})  +{ac_pts:.2f}")
+
+    # --- Tempo: Gaussian similarity, weight 0.5 ---
+    # Normalize BPM to [0, 1] before applying Gaussian so sigma=0.25 is
+    # meaningful. A 30 BPM gap on a 60–180 range = 0.25 normalized → ~0.61 sim.
+    target_tempo = user_prefs.get("target_tempo")
+    if target_tempo is not None:
+        song_tempo_norm   = (song["tempo_bpm"] - TEMPO_MIN) / (TEMPO_MAX - TEMPO_MIN)
+        target_tempo_norm = (target_tempo      - TEMPO_MIN) / (TEMPO_MAX - TEMPO_MIN)
+        tempo_sim = _gaussian_sim(song_tempo_norm, target_tempo_norm)
+        tempo_pts = WEIGHT_TEMPO * tempo_sim
+        score += tempo_pts
+        if tempo_sim >= 0.90:
+            reasons.append(f"tempo is an excellent match ({song['tempo_bpm']:.0f} BPM)  +{tempo_pts:.2f}")
+        elif tempo_sim >= 0.60:
+            reasons.append(f"tempo is close to your preference ({song['tempo_bpm']:.0f} BPM)  +{tempo_pts:.2f}")
 
     return score, reasons
 
@@ -160,6 +193,7 @@ class Recommender:
             "mood": user.favorite_mood,
             "energy": user.target_energy,
             "likes_acoustic": user.likes_acoustic,
+            "target_tempo": user.target_tempo,
         }
 
     def _song_to_dict(self, song: Song) -> Dict:

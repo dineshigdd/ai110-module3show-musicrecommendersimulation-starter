@@ -9,3 +9,11 @@ id,title,artist,genre,mood,energy,tempo_bpm,valence,danceability,acousticness
 8,Night Drive Loop,Neon Echo,synthwave,moody,0.75,110,0.49,0.73,0.22
 9,Focus Flow,LoRoom,lofi,focused,0.40,80,0.59,0.60,0.78
 10,Rooftop Lights,Indigo Parade,indie pop,happy,0.76,124,0.81,0.82,0.35
+11,Crossroads at Dusk,Delta Morrow,blues,lonely,0.33,68,0.28,0.42,0.88
+12,Island Morning,Coastal Roots,reggae,peaceful,0.52,82,0.77,0.71,0.64
+13,Groove Machine,The Funk Unit,funk,playful,0.87,112,0.88,0.93,0.09
+14,Rise Up Slowly,Velvet Soul,soul,hopeful,0.61,94,0.82,0.67,0.55
+15,Fuego Nights,Ritmo Vivo,latin,energetic,0.89,128,0.91,0.95,0.06
+16,Static Revolt,Broken Wire,punk,anxious,0.95,168,0.41,0.72,0.03
+17,Café Saudade,Marina Leal,bossa nova,dreamy,0.31,76,0.69,0.52,0.94
+18,Shadow Protocol,Hex Theory,trap,mysterious,0.72,140,0.38,0.85,0.07

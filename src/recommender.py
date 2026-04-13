@@ -3,34 +3,94 @@ import math
 from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass, asdict
 
-# Scoring weights — updated for expanded 18-song catalog:
-#   Genre (2.0):       Still the top filter but reduced from 3.0 — 13 of 15
-#                      genres have only 1 song, so a 3.0 weight turned the
-#                      recommender into a lookup table for most users.
-#   Mood  (2.5):       Raised above genre — expanded moods (lonely, anxious,
-#                      dreamy, mysterious) are now emotionally specific enough
-#                      to be the strongest differentiating signal.
-#   Energy(2.0):       Raised from 1.5 — catalog spread is 0.28–0.95,
-#                      Gaussian now has real room to discriminate.
-#   Acousticness(1.0): Unchanged — still least defining texture preference.
-#   Tempo (0.5):       New — 60–168 BPM spread is large enough to add signal;
-#                      half-weight keeps it from dominating.
-# Max possible score = 2.0 + 2.5 + 2.0 + 1.0 + 0.5 = 8.0
-WEIGHT_GENRE        = 2.0
-WEIGHT_MOOD         = 2.5
-WEIGHT_ENERGY       = 2.0
-WEIGHT_ACOUSTICNESS = 1.0
-WEIGHT_TEMPO        = 0.5
+# Scoring weights:
+#   Genre (2.5):       Raised from 2.0 — genre is the primary filter;
+#                      soft penalty on mismatch further reinforces this.
+#   Mood  (2.5):       Equal to genre — emotionally specific moods deserve
+#                      the same pull as genre identity.
+#   Energy(1.8):       Slightly reduced from 2.0 — still a strong continuous
+#                      signal but no longer equal to the binary features.
+#   Acousticness(1.0): Unchanged — texture preference, least defining.
+#   Tempo (0.5):       Unchanged — supporting context signal.
+# Max possible score = 2.5 + 2.5 + 1.8 + 1.0 + 0.5 = 8.3
+# (Genre mismatch penalty of -0.5 can push total below zero floor of 0.0)
+WEIGHT_GENRE           = 2.5
+WEIGHT_MOOD            = 2.5
+WEIGHT_ENERGY          = 1.8
+WEIGHT_ACOUSTICNESS    = 1.0
+WEIGHT_TEMPO           = 0.5
+GENRE_MISMATCH_PENALTY = 0.5   # subtracted when genre has no similarity at all
+MOOD_MISMATCH_PENALTY  = 1.0   # subtracted when mood does NOT match
+
+# MAX_SCORE is the theoretical ceiling when every feature is active and perfect.
+MAX_SCORE = WEIGHT_GENRE + WEIGHT_MOOD + WEIGHT_ENERGY + WEIGHT_ACOUSTICNESS + WEIGHT_TEMPO
 
 # Tempo normalization range (BPM → [0, 1] before Gaussian)
 TEMPO_MIN = 60
 TEMPO_MAX = 180
 
-def _gaussian_sim(x: float, y: float, sigma: float = 0.25) -> float:
+# Genre similarity matrix — partial credit for related genres.
+# Values in (0, 1): 1.0 = identical, 0.0 = completely unrelated.
+# Lookup is bidirectional: (a, b) == (b, a).
+# Songs that match partially do NOT receive the mismatch penalty.
+GENRE_SIMILARITY: Dict = {
+    ("pop",        "k-pop"):     0.8,
+    ("pop",        "indie pop"): 0.7,
+    ("pop",        "r&b"):       0.5,
+    ("pop",        "soul"):      0.4,
+    ("rock",       "punk"):      0.6,
+    ("rock",       "metal"):     0.5,
+    ("rock",       "indie pop"): 0.4,
+    ("lofi",       "ambient"):   0.6,
+    ("lofi",       "jazz"):      0.5,
+    ("jazz",       "bossa nova"):0.7,
+    ("jazz",       "soul"):      0.5,
+    ("jazz",       "r&b"):       0.4,
+    ("hip-hop",    "trap"):      0.7,
+    ("hip-hop",    "r&b"):       0.5,
+    ("electronic", "synthwave"): 0.7,
+    ("electronic", "trap"):      0.4,
+    ("folk",       "country"):   0.7,
+    ("folk",       "blues"):     0.5,
+    ("country",    "blues"):     0.5,
+    ("soul",       "r&b"):       0.7,
+    ("funk",       "soul"):      0.6,
+    ("funk",       "r&b"):       0.5,
+    ("ambient",    "classical"): 0.4,
+    ("latin",      "reggae"):    0.4,
+    ("synthwave",  "electronic"):0.7,
+}
+
+
+def _genre_sim(g1: str, g2: str) -> float:
+    """Returns similarity in [0, 1] between two genre strings.
+    1.0 = exact match, uses GENRE_SIMILARITY for related pairs, 0.0 otherwise.
+    Bidirectional: order of arguments does not matter.
+    """
+    g1, g2 = g1.lower(), g2.lower()
+    if g1 == g2:
+        return 1.0
+    return GENRE_SIMILARITY.get((g1, g2)) or GENRE_SIMILARITY.get((g2, g1)) or 0.0
+
+
+def compute_active_weight(user_prefs: Dict) -> float:
+    """Returns the maximum achievable score for this profile.
+    Only counts weights for features the user actually provided,
+    so the /10 display scale is fair even when optional fields are absent.
+    """
+    weight = WEIGHT_GENRE + WEIGHT_MOOD + WEIGHT_ENERGY
+    if user_prefs.get("likes_acoustic") is not None:
+        weight += WEIGHT_ACOUSTICNESS
+    if user_prefs.get("target_tempo") is not None:
+        weight += WEIGHT_TEMPO
+    return weight
+
+def _gaussian_sim(x: float, y: float, sigma: float = 0.15) -> float:
     """
     Gaussian (RBF) similarity kernel.
     Returns 1.0 when x == y, decays smoothly to ~0 as |x - y| grows.
-    sigma=0.25 means a gap of 0.25 scores ~0.61, a gap of 0.5 scores ~0.14.
+    sigma=0.15 (tightened from 0.25): a gap of 0.15 scores ~0.61,
+    a gap of 0.30 scores ~0.14 — stricter, rewards closer matches more.
     """
     return math.exp(-((x - y) ** 2) / (2 * sigma ** 2))
 
@@ -109,21 +169,38 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
     score = 0.0
     reasons = []
 
-    # --- Genre: binary match, weight 3.0 ---
-    # Heaviest weight: genre defines the fundamental sound palette.
-    if song["genre"].lower() == user_prefs.get("genre", "").lower():
-        score += WEIGHT_GENRE
-        reasons.append(f"genre matches ({song['genre']})  +{WEIGHT_GENRE:.1f}")
+    # --- Genre: similarity matrix, weight 2.5 ---
+    # Exact match → full credit. Related genre → partial credit via matrix.
+    # Completely unrelated → 0 credit + mismatch penalty.
+    user_genre = user_prefs.get("genre", "")
+    if user_genre:
+        sim = _genre_sim(song["genre"], user_genre)
+        if sim == 1.0:
+            genre_pts = WEIGHT_GENRE
+            score += genre_pts
+            reasons.append(f"genre matches ({song['genre']})  +{genre_pts:.2f}")
+        elif sim > 0.0:
+            genre_pts = WEIGHT_GENRE * sim
+            score += genre_pts
+            reasons.append(f"genre is similar ({song['genre']} ~ {user_genre}, sim={sim:.1f})  +{genre_pts:.2f}")
+        else:
+            score = max(0.0, score - GENRE_MISMATCH_PENALTY)
+            reasons.append(f"genre mismatch ({song['genre']} != {user_genre})  -{GENRE_MISMATCH_PENALTY:.1f}")
 
-    # --- Mood: binary match, weight 2.5 ---
-    # Second heaviest: mood defines emotional experience within a genre.
-    if song["mood"].lower() == user_prefs.get("mood", "").lower():
-        score += WEIGHT_MOOD
-        reasons.append(f"mood matches ({song['mood']})  +{WEIGHT_MOOD:.1f}")
+    # --- Mood: binary match + mismatch penalty, weight 2.5 ---
+    # Match → full credit. Mismatch → penalty applied (floored at 0).
+    user_mood = user_prefs.get("mood", "")
+    if user_mood:
+        if song["mood"].lower() == user_mood.lower():
+            score += WEIGHT_MOOD
+            reasons.append(f"mood matches ({song['mood']})  +{WEIGHT_MOOD:.1f}")
+        else:
+            score = max(0.0, score - MOOD_MISMATCH_PENALTY)
+            reasons.append(f"mood mismatch ({song['mood']} != {user_mood})  -{MOOD_MISMATCH_PENALTY:.1f}")
 
-    # --- Energy: Gaussian similarity, weight 2.0 ---
-    # Continuous [0, 1]. Gaussian rewards proximity — a song 0.1 away
-    # scores ~0.92×, a song 0.5 away scores ~0.14×.
+    # --- Energy: Gaussian similarity, weight 1.8 ---
+    # sigma=0.15: stricter than before — a 0.15 gap scores ~0.61x,
+    # a 0.30 gap scores ~0.14x. Rewards precise energy matches strongly.
     energy_sim = _gaussian_sim(song["energy"], user_prefs.get("energy", 0.5))
     energy_pts = WEIGHT_ENERGY * energy_sim
     score += energy_pts
@@ -146,8 +223,8 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
             reasons.append(f"acousticness fits your taste ({song['acousticness']:.2f})  +{ac_pts:.2f}")
 
     # --- Tempo: Gaussian similarity, weight 0.5 ---
-    # Normalize BPM to [0, 1] before applying Gaussian so sigma=0.25 is
-    # meaningful. A 30 BPM gap on a 60–180 range = 0.25 normalized → ~0.61 sim.
+    # Normalize BPM to [0, 1] before Gaussian so sigma=0.15 is meaningful.
+    # A 18 BPM gap on a 60–180 range = 0.15 normalized → ~0.61 sim.
     target_tempo = user_prefs.get("target_tempo")
     if target_tempo is not None:
         song_tempo_norm   = (song["tempo_bpm"] - TEMPO_MIN) / (TEMPO_MAX - TEMPO_MIN)

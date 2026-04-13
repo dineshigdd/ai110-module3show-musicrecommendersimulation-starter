@@ -39,34 +39,26 @@ Like/save a song = explicit preference
 This improves the recommendation systems with real time data.
 
 ### How My system works
-My recommendation sytem uses four features:
+My recommendation system uses five features:
 1. genre 
-2. mood (defines the emotional experience )
+2. mood 
 3. energy
 4. acousticness
 5. tempo 
 
-The reasoning for weight as follows:
-Genre (2.5) is the coarsest filter. 
-The system assumes that a person would choose genre regardless of energy or mood. For example . Some one that listen soft rock or jazz music frequenlty music would rarely listen hip-hop or metal song regardless of the enrgy and mood. 
+- Genre is the coarsest filter with  broad categorical bucket (rock, pop, jazz…), with a similarity matrix that gives partial credit to related genres.
 
-Mood (2.5) is Second most defining after genre. A "happy" song and a "moody" song feel fundamentally different even in the same genre.
+* Mood is equally weighted but more 'emotionally precise' with binary match (no partial credit), with a harsher mismatch penalty.
 
-Energy (1.8) — continuous and context-critical 
-When you are at the gym, you want to listen to high-energy songs. On the other hand, when you study, you prefer low-energy songs. However, within a session at the gym or during study time, you might tolerate some variance in these energy levels. Thus, the energy feature is continuous (not binary), requiring a smooth transition where the system picks songs with a similar 'vibe' rather than jumping abruptly between different levels.
+* Energy continuous and context-critical.It uses Gaussian function.
 
-Acousticness (1.0) is a low-priority texture preference. It represents the choice between Organic (acoustic) and Electronic (synthetic) sounds, based on the assumption that the 'instrument feel' is less important to the listener than the Genre or the Energy of the song.
+* Acousticness (1.0) is a low-priority texture preference. 
 
-Tempo (0.5):  Tempo (BPM) has the lowest weight in the scoring system because it's considered a secondary detail rather than a defining characteristic of a song
+* Tempo (0.5):  Tempo (BPM) has the lowest weight in the scoring system 
 
-Based on these five features , the system calculte a maximum score of 8.3 when everything matches perfectly.
-Max possible score = 2.5 + 2.5 + 1.8 + 1.0 + 0.5 = 8.3
+* There is also penalties for mistmached genre  or mismatched mood 
 
-There is also penalties for mistmached genre( -0.5 ) or mismatched mood( -1.0 )
-Explain your design in plain language.
-- What features does each `Song` use in your system
-  - For example: genre, mood, energy, tempo
-
+* What features does each `Song` use in your system
   The system is designed to score and rank songs based on five features. The Song class , therefore,has five mains attributes:
   1. genre
   2. mood
@@ -100,31 +92,7 @@ The genre similarity map was written by hand, so genres like reggae, latin, and 
 
 Finally, users with a rare combination — like blues and sad — get hit with multiple penalties at once, leaving the system with almost no signal to rank songs, so the bottom results are essentially random.
 
-scoring system
-=============
-For genre and mood features
-A binary score is used. If the genre doesn't match, the score drops significantly because the weight is high (2.5).
 
-For continuous features (energy, acousticness), instead of linear 1 - |diff| ,use a Gaussian/RBF kernel:
-sim(x, y) = exp(-(x - y)² / (2σ²)).
-
-Why Gaussian 
- Linear penalizes all gaps equally — a song 0.1 away loses as much per unit as one 0.5 away. 
- The Gaussian function produces a bell curve providing smooth transition. The closer the song is to the choosen target energy, the more points it gets.Therefore, Gaussian is more realistic; small differences barely matter, large differences are heavily penalized. It also never goes negative.
- 
- 
-Ex:
-With σ=0.25: a song 0.1 away scores 0.92, a song 0.25 away scores 0.61, a song 0.5 away scores 0.14. Natural, smooth decay — rewards songs close to preference rather than just "any direction."
-
-Summary of the scoring rule
-## Scoring Rule (Max Score = 7.5)
-
-| Feature | Type | Weight | Method |
-| :--- | :--- | :--- | :--- |
-| **Genre** | Binary | 3.0 | Exact match → full points or 0 |
-| **Mood** | Binary | 2.0 | Exact match → full points or 0 |
-| **Energy** | Continuous | 1.5 | Gaussian: $e^{-\frac{(x-y)^2}{2\sigma^2}}$, where $\sigma=0.25$ |
-| **Acousticness** | Continuous | 1.0 | Same Gaussian, target = 1.0 or 0.0 |
 
 ###
 Song object
@@ -137,7 +105,7 @@ Song object
 | **genre** | str | Yes — matched against user preference |
 | **mood** | str | Yes — matched against user preference |
 | **energy** | float | Yes — Gaussian similarity against target |
-| **tempo_bpm** | float | No — loaded but never scored |
+| **tempo_bpm** | float | Yes — Gaussian similarity against target_tempo (optional) |
 | **valence** | float | No — loaded but never scored |
 | **danceability** | float | No — loaded but never scored |
 | **acousticness** | float | Yes — Gaussian similarity against target |
@@ -145,10 +113,11 @@ Song object
 UserProfile object
 | Field | Type | Used in scoring? |
 | :--- | :--- | :--- |
-| **favorite_genre** | str | Yes — binary match against song.genre |
+| **favorite_genre** | str | Yes — similarity matrix match against song.genre |
 | **favorite_mood** | str | Yes — binary match against song.mood |
 | **target_energy** | float | Yes — target for Gaussian similarity |
 | **likes_acoustic** | bool | Yes — maps to 1.0 or 0.0, then Gaussian similarity |
+| **target_tempo** | float (optional) | Yes — normalized BPM target for Gaussian similarity; skipped if not provided |
 
 
 ### Comparrion between real-world recommedation system and this system
@@ -217,7 +186,7 @@ behavior at scale — if 90% of listeners play a song at 1am on weekdays,
 the system classifies it as "chill" without anyone labeling it. 
 
 - **Not teachable** 
-The system is does not use any teachable models,which means the system cannot improve from user feedback (weights (genre=3.0, mood=2.0, etc.) are hand-coded constants. ).
+The system does not use any teachable models, which means the system cannot improve from user feedback (weights genre=2.5, mood=2.5, energy=1.8, acousticness=1.0, tempo=0.5 are hand-coded constants).
 
 - **Static user profile** 
   User preferences never update. Skipping or replaying  songs has no effect on future recommendations.
@@ -226,8 +195,7 @@ The system is does not use any teachable models,which means the system cannot im
 
 - **Tiny catalog** — 18 songs. Real systems operate on millions.
 
-- **Unused features** — valence, and danceability are loaded
-  but never scored, leaving signal on the table.
+- **Unused features** — valence and danceability are loaded but never scored, leaving signal on the table.
 
 ---
 

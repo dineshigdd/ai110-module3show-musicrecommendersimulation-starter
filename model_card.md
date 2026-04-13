@@ -11,8 +11,6 @@ Example: **VibeFinder 1.0**
 
 Describe what your recommender is designed to do and who it is for. 
 
-Prompts:  
-
 - What kind of recommendations does it generate  
 The recommender generates a ranked list of songs from a small fixed catalog, scored by how closely each song's features match a hand-written user preference dictionary. Every recommendation comes with a numerical score out of 10 and a bullet-point explanation of exactly which features matched or mismatched. It does not learn, does not remember past sessions, and does not adapt — every run produces the same output for the same input.
 
@@ -33,17 +31,62 @@ This is strictly for classroom exploration. A real production system would learn
 ---
 
 ## 3. How the Model Works  
+### Scoring system
+The scoring system uses five features to evaluate a song using a mathematical model.
 
-Explain your scoring approach in simple language.  
+Genre (2.5) is the coarsest filter. 
+The system assumes that a person would choose genre regardless of energy or mood. For example . Some one that listen soft rock or jazz music frequenlty music would rarely listen hip-hop or metal song regardless of the enrgy and mood. 
 
-Prompts:  
+Mood (2.5) is Second most defining after genre. A "happy" song and a "moody" song feel fundamentally different even in the same genre.
 
-- What features of each song are used (genre, energy, mood, etc.)  
-- What user preferences are considered  
-- How does the model turn those into a score  
-- What changes did you make from the starter logic  
+Energy (1.8) — continuous and context-critical 
+When you are at the gym, you want to listen to high-energy songs. On the other hand, when you study, you prefer low-energy songs. However, within a session at the gym or during study time, you might tolerate some variance in these energy levels. Thus, the energy feature is continuous (not binary), requiring a smooth transition where the system picks songs with a similar 'vibe' rather than jumping abruptly between different levels.
 
-Avoid code here. Pretend you are explaining the idea to a friend who does not program.
+Acousticness (1.0) is a low-priority texture preference. It represents the choice between Organic (acoustic) and Electronic (synthetic) sounds, based on the assumption that the 'instrument feel' is less important to the listener than the Genre or the Energy of the song.
+
+Tempo (0.5):  Tempo (BPM) has the lowest weight in the scoring system because it's considered a secondary detail rather than a defining characteristic of a song
+
+Based on these five features , the system calculate a maximum score of 8.3 when everything matches perfectly.
+Max possible score = 2.5 + 2.5 + 1.8 + 1.0 + 0.5 = 8.3
+
+There is also penalties for mistmached genre( -0.5 ) or mismatched mood( -1.0 )
+
+#### Normalizing the actual score
+Although the score is based on a maximum score of 8.3, for human-readability purposes, it is normalized to a 10-point scale so that the results display on a range of 0–10.
+
+normalized = (score / active_weight) * 10
+
+score: The raw weighted sum from score_song (max 8.3 if all features are provided).
+
+active_weight: The maximum achievable score for this specific user, computed by compute_active_weight(), which only counts weights for features the user actually provided (e.g., if no target_tempo is given, its 0.5 weight is excluded)
+
+
+#### More on scoring system
+For genre and mood features
+A binary score is used. If the genre doesn't match, the score drops significantly because the weight is high (2.5).
+
+For continuous features (energy, acousticness), instead of linear 1 - |diff| ,use a Gaussian/RBF kernel:
+sim(x, y) = exp(-(x - y)² / (2σ²)).
+
+Ex:
+With σ=0.15: a song 0.15 away scores ~0.61, a song 0.30 away scores ~0.14. Therefore, stricter rewards for close matches, heavier penalty for larger gaps.
+
+Why Gaussian 
+ Linear penalizes all gaps equally — a song 0.1 away loses as much per unit as one 0.5 away. 
+ The Gaussian function produces a bell curve providing smooth transition. The closer the song is to the choosen target energy, the more points it gets.Therefore, Gaussian is more realistic; small differences barely matter, large differences are heavily penalized. It also never goes negative. 
+
+
+## Summary of the scoring rule
+
+Scoring Rule (Max Score = 8.3)
+
+| Feature | Type | Weight | Method |
+| :--- | :--- | :--- | :--- |
+| **Genre** | Similarity matrix | 2.5 | Exact match → full credit; related genre → partial credit; unrelated → −0.5 penalty |
+| **Mood** | Binary | 2.5 | Exact match → full credit; mismatch → −1.0 penalty |
+| **Energy** | Continuous | 1.8 | Gaussian: $e^{-\frac{(x-y)^2}{2\sigma^2}}$, where $\sigma=0.15$ |
+| **Acousticness** | Continuous | 1.0 | Same Gaussian, target = 1.0 (acoustic) or 0.0 (not acoustic) |
+| **Tempo** | Continuous | 0.5 | Gaussian on normalized BPM [0,1], $\sigma=0.15$; optional |
 
 ---
 

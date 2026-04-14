@@ -197,7 +197,7 @@ Every song takes the -0.5 mismatch penalty, but mood still fires. Sunrise City r
     1. Fuego Nights (latin) beat Storm Runner (rock) for the Road Trip profile  
         Road Trip asked for genre=rock. Storm Runner is the only rock song in the catalog. I expected it to rank #1 easily. Instead Fuego Nights (latin) ranked #1 at 6.6/10 vs Storm Runner's 5.5/10. 
 
-        The reason: mood match (energetic +2.5) outweighed genre match (+2.5) because Storm Runner took the mood mismatch penalty (intense != energetic -1.0). The system technically did the right thing by the weights, but recommending a latin song to someone who asked for rock would feel wrong to a real user. It exposed that mood weight equaling genre weight is a questionable design decision.
+        The reason for this is that the mood match (energetic +2.5) outweighed the genre match (+2.5) because 'Storm Runner' received a mood mismatch penalty (intense != energetic, -1.0). While the system technically followed the assigned weights, recommending a Latin song to a user who requested Rock would feel incorrect in a real-world scenario. This exposed that setting the mood weight equal to the genre weight is a questionable design decision.
 
     2. Unknown Genre (k-pop) produced the most confident-looking result outside perfect profiles  
         I expected k-pop to score poorly across the board since it doesn't exist in the catalog. Instead Sunrise City scored 8.6/10 — higher than most regular profile results. 

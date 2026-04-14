@@ -122,56 +122,55 @@ The acoustic preference is forced into a yes-or-no choice, which ignores users w
 
 The genre similarity map was written by hand, so genres like reggae, latin, and classical have fewer connections than pop or rock — fans of those genres get harsher penalties even when a reasonable alternative exists. 
 
-
 When a user skips optional preferences like tempo or acousticness, their scores look artificially high on the 0–10 scale, making weak recommendations appear more confident than they actually are. Finally, users with a rare combination — like blues and sad — get hit with multiple penalties at once, leaving the system with almost no signal to rank songs, so the bottom results are essentially random.
 ---
 
 ## 7. Evaluation  
 
-- Which user profiles you tested
+### user profiles tested
 
-The system is stress tested against four diverse user profiles:
+The system is stress-tested against four diverse user profiles:
 
-Gym Profile
-![Gym profile](images/gym-profile.PNG)
+Gym Profile  
+![Gym profile](images/gym-profile.PNG)  
 The Gym Hero scores 7.98/8.0, nearly perfect. All five features align. The 3 BPM gap (135 target vs 132 actual) barely costs anything.
 
-Late night study profile
-![Late night study](images/late-night-study.PNG)
+Late night study profile  
+![Late night study](images/late-night-study.PNG)  
 The Focus Flow scores 7.67 despite acousticness only partially matching (0.78 vs target 1.0). The Gaussian partial credit keeps it ranked above zero on that feature.
 
-Road Trip profile
-![Road Trip](images/road-trip.PNG)
+Road Trip profile  
+![Road Trip](images/road-trip.PNG)  
 An interesting failure case: Fuego Nights (latin) ranks #1 over Storm Runner (rock, genre match) because mood "energetic" (+2.5) outweighs genre (+2.0). This is the new weight hierarchy doing its job.
 
-Sunday Morning profile
-![Sunday Morning](images/sunday-morning.PNG)
-The Café Saudade scores 7.97/8.0. Demonstrates genre + mood both matching a niche profile. #2 and #3 score only 3.3 — a wide gap, showing the profile is specific enough to clearly separate results.
+Sunday Morning profile  
+![Sunday Morning](images/sunday-morning.PNG)  
+The Café Saudade scores 7.97/8.0. Demonstrates genre + mood both matching a niche profile. #2 and #3 score only 3.3 — a wide gap, showing the profile is specific enough to clearly separate results.  
 
-The recommnder is also tested against edge cases
+The recommnder is also tested against edge cases  
 
-Acoustic and high Energy
-Tested for contradictory preferences(Folk, uplifting, energy 0.92, acoustic) where no song in the catalog satisfies both.
-![Acoustic High Energy](images/edge-acoustic-high-energy.PNG) 
-The current catalog contains no high-energy acoustic songs, as all acoustic tracks have energy levels below 0.45. This creates a conflict where the user's preferences point to opposite ends of the dataset, resulting in weak, nearly tied scores( 2.7, 2.6, 2.6) and genre mismatches. This scenario represents the system's hardest case(a situation where the user's requirements are mathematically impossible to satisfy using the current data), highlighting the need for either a much larger catalog or a "no match found" notification to handle contradictory search criteria effectively.
-
-
-High energy and sad mood
-Tested conflicting signals where energy and mood point at completely different songs.
-![High Energy Sad](images/edge-high-energy-sad-mood.PNG)
-sad doesn't exist in the catalog at all, so mood scores 0 for every song. The system falls back to ranking by energy + acousticness alone. Top scores hover around 3.7/10 — low but not zero. Therefore, When a user requests a mood not present in the catalog, the system fails silently by providing poor recommendations without triggering an error.
+Acoustic and high Energy  
+Tested for contradictory preferences(Folk, uplifting, energy 0.92, acoustic) where no song in the catalog satisfies both.  
+![Acoustic High Energy](images/edge-acoustic-high-energy.PNG)  
+The current catalog contains no high-energy acoustic songs, as all acoustic tracks have energy levels below 0.45. This creates a conflict where the user's preferences point to opposite ends of the dataset, resulting in weak, nearly tied scores( 2.7, 2.6, 2.6) and genre mismatches. This scenario represents the system's hardest case(a situation where the user's requirements are mathematically impossible to satisfy using the current data), highlighting the need for either a much larger catalog or a "no match found" notification to handle contradictory search criteria effectively.  
 
 
-Ambigious Energy
-Jazz, relaxed, energy 0.50, no acousticness, no tempo — tests what happens when continuous features give no useful signal
+High energy and sad mood  
+Tested conflicting signals where energy and mood point at completely different songs.  
+![High Energy Sad](images/edge-high-energy-sad-mood.PNG)  
+sad doesn't exist in the catalog at all, so mood scores 0 for every song. The system falls back to ranking by energy + acousticness alone. Top scores hover around 3.7/10 — low but not zero. Therefore, When a user requests a mood not present in the catalog, the system fails silently by providing poor recommendations without triggering an error.  
 
-![Ambigious Energy](images/edge-ambigious-energy.PNG)
-The mid-point energy(0.5) with no acousticness or tempo preference. Coffee Shop Stories (jazz, relaxed) wins at 7.5/10 because genre + mood binary matches dominate completely. #2 and #3 score only 2.1 and 1.9. The binary features(genre and mood) rescue the system when continuous features give no useful signal. This is the intended behavior, but it also means energy=0.5 is essentially a wasted preference.
 
-Unknown Genre
-k-pop, happy, energy 0.75 — tests graceful degradation when genre doesn't exist in the catalog.
-![Unknown Genre](images/edge-unknown-genre.PNG)
-Every song takes the -0.5 mismatch penalty, but mood still fires. Sunrise City ranks #1 at 6.1/10 purely through mood matches (happy) +2.5 + energy + tempo. Thus,the system degrades gracefully. It uses whatever signal it can find rather than returning nothing.
+Ambigious Energy  
+Jazz, relaxed, energy 0.50, no acousticness, no tempo — tests what happens when continuous features give no useful signal  
+
+![Ambigious Energy](images/edge-ambigious-energy.PNG)  
+The mid-point energy(0.5) with no acousticness or tempo preference. Coffee Shop Stories (jazz, relaxed) wins at 7.5/10 because genre + mood binary matches dominate completely. #2 and #3 score only 2.1 and 1.9. The binary features(genre and mood) rescue the system when continuous features give no useful signal. This is the intended behavior, but it also means energy=0.5 is essentially a wasted preference.  
+
+Unknown Genre  
+k-pop, happy, energy 0.75 — tests graceful degradation when genre doesn't exist in the catalog.  
+![Unknown Genre](images/edge-unknown-genre.PNG)  
+Every song takes the -0.5 mismatch penalty, but mood still fires. Sunrise City ranks #1 at 6.1/10 purely through mood matches (happy) +2.5 + energy + tempo. Thus,the system degrades gracefully. It uses whatever signal it can find rather than returning nothing.  
 
 - What you looked for in the recommendations  
 1. Does the #1 result feel obviously right?

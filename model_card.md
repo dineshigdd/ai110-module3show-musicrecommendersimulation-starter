@@ -86,8 +86,6 @@ Scoring Rule (Max Score = 8.3)
 
 ## 4. Data  
 
-Describe the dataset the model uses.  
-
 - How many songs are in the catalog  
 There are exactly 18 songs in the catalog (numbered 1 to 18). 
 
@@ -103,8 +101,6 @@ Yes, several common tastes are missing. For example, there is no Classical, Coun
 
 ## 5. Strengths  
 
-Where does your system seem to work well   
-
 - User types for which it gives reasonable results  
 Users with clear, specific preferences — a defined genre, a single mood, and a target energy — get the most reliable results. Profiles like Late Night Study (lofi, focused, low energy) and Sunday Morning (bossa nova, dreamy, low energy) produced confident top picks above 9/10 because all five features aligned tightly with songs in the catalog.
 
@@ -117,8 +113,6 @@ Gym Session's #1 pick (a high-energy, intense pop song at 9.9/10) and Late Night
 ---
 
 ## 6. Limitations and Bias 
-
-Where the system struggles or behaves unfairly. 
 
 The system struggles with users who prefer mid-range energy (not too calm, not too intense) because most songs in the catalog cluster at the extremes — very high or very low energy — so the math never finds a close match for them. 
 
@@ -133,8 +127,6 @@ When a user skips optional preferences like tempo or acousticness, their scores 
 ---
 
 ## 7. Evaluation  
-
-How you checked whether the recommender behaved as expected.
 
 - Which user profiles you tested
 

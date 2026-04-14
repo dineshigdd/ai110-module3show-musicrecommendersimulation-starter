@@ -120,9 +120,12 @@ Mood is treated as all-or-nothing, meaning "chill" and "relaxed" are considered 
 
 The acoustic preference is forced into a yes-or-no choice, which ignores users who enjoy a mix of both acoustic and electronic sounds. 
 
-The genre similarity map was written by hand, so genres like reggae, latin, and classical have fewer connections than pop or rock — fans of those genres get harsher penalties even when a reasonable alternative exists.
+The genre similarity map was written by hand, so genres like reggae, latin, and classical have fewer connections than pop or rock — fans of those genres get harsher penalties even when a reasonable alternative exists. 
 
-When a user skips optional preferences like tempo or acousticness, their scores look artificially high on the 0–10 scale, making weak recommendations appear more confident than they actually are. Finally, users with a rare combination — like blues and sad — get hit with multiple penalties at once, leaving the system with almost no signal to rank songs, so the bottom results are essentially random.
+When a user skips optional preferences like tempo or acousticness, their scores look artificially high on the 0–10 scale, making weak recommendations appear more confident than they actually are.
+
+Finally, users with a rare combination — like blues and sad — get hit with multiple penalties at once, leaving the system with almost no signal to rank songs, so the bottom results are essentially random.
+
 ---
 
 ## 7. Evaluation  
@@ -173,19 +176,19 @@ k-pop, happy, energy 0.75 — tests graceful degradation when genre doesn't exis
 Every song takes the -0.5 mismatch penalty, but mood still fires. Sunrise City ranks #1 at 6.1/10 purely through mood matches (happy) +2.5 + energy + tempo. Thus,the system degrades gracefully. It uses whatever signal it can find rather than returning nothing.  
 
 - What you looked for in the recommendations  
-    1. Does the #1 result feel obviously right?
+    1. Does the #1 result feel obviously right?  
     The top song should match genre and mood. If it doesn't , for example, a jazz song appearing first for a pop user , the weights are broken. For well-formed profiles like Gym Session and Sunday Morning, the #1 song scored 9.9/10 with all five features aligned, which is the expected behavior.
 
-    2. Is there a meaningful gap between #1 and #2?
+    2. Is there a meaningful gap between #1 and #2?  
     A good recommender should be confident about its top pick. Gym Hero at 9.9 vs Storm Runner at 6.5 is a healthy gap — the system is sure. Road Trip's #1 and #2 were 6.6 vs 5.5 — much closer, meaning the system was less certain, which is honest given that no song perfectly matched rock + energetic.
 
-    3. Do the reasons actually explain the score?
+    3. Do the reasons actually explain the score?  
     Each bullet point contribution should add up visibly to the total. The score is normalized as `(score / active_weight) * 10`, where `active_weight` is computed dynamically — only counting weights for features the user actually provided. This keeps the 0–10 scale fair even when optional fields like tempo or acousticness are skipped. The theoretical max raw score is 8.3 (all five features active).
 
-    4. Do edge cases degrade gracefully or break silently?
+    4. Do edge cases degrade gracefully or break silently?  
     For Unknown Genre (k-pop), I looked for whether the system still returned sensible songs using mood and energy alone rather than crashing or returning nothing. It did — pop songs surfaced through the similarity matrix. For High Energy + Sad Mood, I checked whether the double penalty left any meaningful ranking signal, and it largely didn't — all top scores clustered around 3.5–3.7/10 with near-identical reasons.
 
-    5. Does the score scale feel honest?
+    5. Does the score scale feel honest?  
     A 2.7/10 for Acoustic + High Energy should feel like a weak recommendation, and it does — no song satisfied both constraints. A 9.2/10 for Late Night Study should feel like a strong one, and it does — genre, mood, energy, and tempo all aligned tightly. The normalized scale was checked to make sure it wasn't inflating weak matches into appearing confident.
 
 - What surprised you  

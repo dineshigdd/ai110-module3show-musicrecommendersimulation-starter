@@ -157,13 +157,13 @@ You can add more tests in `tests/test_recommender.py`.
 
 ## Experiments You Tried
 
-- **What happened when you changed the genre weight from 3.0 to 2.5**
+- **What happened when you changed the genre weight from 3.0 to 2.5**  
 Lowering genre from 3.0 to 2.5 and raising mood to match it (also 2.5) made the system less rigid. Previously, a genre mismatch was so costly that mood, energy, and tempo could rarely overcome it. At equal weights, a song with a perfect mood match but a related genre (e.g. pop for a k-pop user) can now compete with a genre-exact but mood-mismatched song. The rankings became more emotionally sensitive and less genre-locked.
 
-- **What happened when you added tempo to the score**
+- **What happened when you added tempo to the score**  
 Adding tempo (weight 0.5) with a normalized Gaussian on BPM [0, 1] produced small but meaningful tie-breaking effects. For profiles with very close #1 and #2 scores (like Road Trip), tempo nudged the ranking in favor of the song whose BPM was closer to the target. It had no visible effect on already-confident profiles (like Gym Session) where genre and mood already dominated the score.
 
-- **How did your system behave for different types of users**
+- **How did your system behave for different types of users**  
 Well-defined profiles (Gym Session, Late Night Study, Sunday Morning) produced confident top picks with large gaps between #1 and #2. Edge case profiles exposed weaknesses: Road Trip struggled because no song perfectly matched rock + energetic, compressing all scores into a narrow band. The Unknown Genre (k-pop) profile surprisingly produced a high-confidence result (8.6/10) because the similarity matrix partially rescued pop songs. The Ambiguous Energy (0.5) profile showed how binary features completely take over when continuous features give equal scores to every song.
 
 ---

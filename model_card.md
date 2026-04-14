@@ -2,7 +2,7 @@
 
 ## 1. Model Name  
 
-Example: **CoreAudio Engine 1.0**  
+**CoreAudio Engine 1.0**  
 
 ---
 
@@ -13,15 +13,11 @@ Describe what your recommender is designed to do and who it is for.
 The recommender generates a ranked list of songs from a small fixed catalog, scored by how closely each song's features match a hand-written user preference dictionary. Every recommendation comes with a numerical score out of 10 and a bullet-point explanation of exactly which features matched or mismatched. It does not learn, does not remember past sessions, and does not adapt — every run produces the same output for the same input.
 
 - What assumptions does it make about the user  
-- Before hearing any music, the user knows and can articulate their preferences in advance — genre, mood, energy level, acoustic preference, and tempo. 
-
-- User preferences are stable and do not change mid-session. 
-
-- One mood and one genre fully describe what the user wants right now, with no room for "it depends" or mixed feelings. 
-
-- The user cares about features in a fixed priority order (mood and genre above energy, energy above acousticness) regardless of context. 
-
-- The user's taste fits neatly into the labels available in the catalog — if you want something that sits between "chill" and "relaxed," the system has no way to represent that.
+    - Before hearing any music, the user knows and can articulate their preferences in advance — genre, mood, energy level, acoustic preference, and tempo.   
+    - User preferences are stable and do not change mid-session.  
+    - One mood and one genre fully describe what the user wants right now, with no room for "it depends" or mixed feelings.  
+    - The user cares about features in a fixed priority order (mood and genre above energy, energy above acousticness) regardless of context.  
+    - The user's taste fits neatly into the labels available in the catalog — if you want something that sits between "chill" and "relaxed," the system has no way to represent that.  
 
 - Is this for real users or classroom exploration  
 This is strictly for classroom exploration. A real production system would learn weights from millions of listening events rather than hand-coding them, would update the user profile continuously from behavior like skips and replays, would operate on a catalog of millions of songs rather than 18, and would never ask a user to type in their preferred energy level as a float between 0 and 1. The value of this system is not what it recommends — it is that every decision is visible and traceable, which makes it a useful teaching tool for understanding how scoring, weighting, and ranking work before studying the black-box models that real platforms use.

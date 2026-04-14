@@ -114,17 +114,17 @@ Gym Session's #1 pick (a high-energy, intense pop song at 9.9/10) and Late Night
 
 ## 6. Limitations and Bias 
 
-The system struggles with users who prefer mid-range energy (not too calm, not too intense) because most songs in the catalog cluster at the extremes — very high or very low energy — so the math never finds a close match for them. 
+- The system struggles with users who prefer mid-range energy (not too calm, not too intense) because most songs in the catalog cluster at the extremes — very high or very low energy — so the math never finds a close match for them. 
 
-Mood is treated as all-or-nothing, meaning "chill" and "relaxed" are considered completely different even though in real life they feel almost the same, so a user gets penalized unfairly for near-matches. 
+- Mood is treated as all-or-nothing, meaning "chill" and "relaxed" are considered completely different even though in real life they feel almost the same, so a user gets penalized unfairly for near-matches. 
 
-The acoustic preference is forced into a yes-or-no choice, which ignores users who enjoy a mix of both acoustic and electronic sounds. 
+- The acoustic preference is forced into a yes-or-no choice, which ignores users who enjoy a mix of both acoustic and electronic sounds. 
 
-The genre similarity map was written by hand, so genres like reggae, latin, and classical have fewer connections than pop or rock — fans of those genres get harsher penalties even when a reasonable alternative exists. 
+- The genre similarity map was written by hand, so genres like reggae, latin, and classical have fewer connections than pop or rock — fans of those genres get harsher penalties even when a reasonable alternative exists. 
 
-When a user skips optional preferences like tempo or acousticness, their scores look artificially high on the 0–10 scale, making weak recommendations appear more confident than they actually are.
+- When a user skips optional preferences like tempo or acousticness, their scores look artificially high on the 0–10 scale, making weak recommendations appear more confident than they actually are.
 
-Finally, users with a rare combination — like blues and sad — get hit with multiple penalties at once, leaving the system with almost no signal to rank songs, so the bottom results are essentially random.
+- Finally, users with a rare combination — like blues and sad — get hit with multiple penalties at once, leaving the system with almost no signal to rank songs, so the bottom results are essentially random.
 
 ---
 
@@ -210,11 +210,14 @@ Every song takes the -0.5 mismatch penalty, but mood still fires. Sunrise City r
 
 ---
 
-## 8. Future Work  
-    The system should be improved by expanding the catalog with more diverse tracks that cover a wider range of the primary scoring features. Additionally, the model could incorporate secondary features as 'fallback' signals when the five main criteria fail to produce a high-confidence score. As the dataset grows, it is crucial to re-evaluate the feature weights and conduct rigorous testing against diverse user profiles and edge cases to ensure the system handles conflicting or missing data effectively.
+## 8. Future Work
+
+The system should be improved by expanding the catalog with more diverse tracks that cover a wider range of the primary scoring features. Additionally, the model could incorporate secondary features as ‘fallback’ signals when the five main criteria fail to produce a high-confidence score. As the dataset grows, it is crucial to re-evaluate the feature weights and conduct rigorous testing against diverse user profiles and edge cases to ensure the system handles conflicting or missing data effectively.
+
 ---
 
-## 9. Personal Reflection 
-    Through this project, I learned the fundamental mechanics of how recommendation systems function. I discovered that while mathematical models are essential, the system’s performance improves significantly as the catalog expands; therefore, a large dataset is critical for a high-quality user experience.
+## 9. Personal Reflection
 
-    This simulation also highlighted the key differences between a basic content-based model and complex, real-world systems. Building this project helped me understand the concepts used by major tech companies and clarified why they are so determined to collect data from millions of users to refine their algorithms.
+Through this project, I learned the fundamental mechanics of how recommendation systems function. I discovered that while mathematical models are essential, the system’s performance improves significantly as the catalog expands; therefore, a large dataset is critical for a high-quality user experience.
+
+This simulation also highlighted the key differences between a basic content-based model and complex, real-world systems. Building this project helped me understand the concepts used by major tech companies and clarified why they are so determined to collect data from millions of users to refine their algorithms.

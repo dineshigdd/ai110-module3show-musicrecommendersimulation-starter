@@ -135,18 +135,22 @@ Gym Session's #1 pick (a high-energy, intense pop song at 9.9/10) and Late Night
 The system is stress-tested against four diverse user profiles:
 
 - **Gym Profile**  
+*Gym profile targets high-energy pop at 135 BPM; intense mood, no acoustics.*  
 ![Gym profile](images/gym-profile.PNG)  
 The Gym Hero scores 7.98/8.0, nearly perfect. All five features align. The 3 BPM gap (135 target vs 132 actual) barely costs anything.
 
 - **Late night study profile**  
+*Late Night Study profile shifts toward quiet lofi at 78 BPM; focused mood, fully acoustic.*  
 ![Late night study](images/late-night-study.PNG)  
 The Focus Flow scores 7.67 despite acousticness only partially matching (0.78 vs target 1.0). The Gaussian partial credit keeps it ranked above zero on that feature.
 
-- **Road Trip profile**    
+- **Road Trip profile**  
+*Road Trip profile favors high-energy rock at 150 BPM; energetic mood, no acoustics.*  
 ![Road Trip](images/road-trip.PNG)  
 An interesting failure case: Fuego Nights (latin) ranks #1 over Storm Runner (rock, genre match) because mood "energetic" (+2.5) outweighs genre (+2.0). This is the new weight hierarchy doing its job.
 
-- **Sunday Morning profile**    
+- **Sunday Morning profile**  
+*Sunday Morning profile prefers low-energy bossa nova at 75 BPM; dreamy mood, fully acoustic.*  
 ![Sunday Morning](images/sunday-morning.PNG)  
 The Café Saudade scores 7.97/8.0. Demonstrates genre + mood both matching a niche profile. #2 and #3 score only 3.3 — a wide gap, showing the profile is specific enough to clearly separate results.  
 

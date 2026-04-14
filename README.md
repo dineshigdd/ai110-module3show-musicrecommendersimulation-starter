@@ -172,23 +172,26 @@ Well-defined profiles (Gym Session, Late Night Study, Sunday Morning) produced c
 
 Summarize some limitations of your recommender.
 
-- **human-assigned and sparse labels**
+- **human-assigned and sparse labels**  
 The labels are human-assigned and sparse. For example,
 genre = "lofi", mood = "happy". Real systems infer these implicitly from
 behavior at scale — if 90% of listeners play a song at 1am on weekdays,
 the system classifies it as "chill" without anyone labeling it. 
 
-- **Not teachable** 
+- **Not teachable**   
 The system does not use any teachable models, which means the system cannot improve from user feedback (weights genre=2.5, mood=2.5, energy=1.8, acousticness=1.0, tempo=0.5 are hand-coded constants).
 
-- **Static user profile** 
+- **Static user profile**  
   User preferences never update. Skipping or replaying  songs has no effect on future recommendations.
 
-- **No diversity control** — if five songs all share the same genre, all five get recommended even if they sound nearly identical.
+- **No diversity control**  
+  If five songs all share the same genre, all five get recommended even if they sound nearly identical.
 
-- **Tiny catalog** — 18 songs. Real systems operate on millions.
+- **Tiny catalog**  
+  18 songs. Real systems operate on millions.
 
-- **Unused features** — valence and danceability are loaded but never scored, leaving signal on the table.
+- **Unused features**  
+  valence and danceability are loaded but never scored, leaving signal on the table.
 
 ---
 

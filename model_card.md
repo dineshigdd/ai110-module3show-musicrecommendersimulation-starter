@@ -2,28 +2,26 @@
 
 ## 1. Model Name  
 
-Give your model a short, descriptive name.  
-Example: **VibeFinder 1.0**  
+Example: **CoreAudio Engine 1.0**  
 
 ---
 
 ## 2. Intended Use  
 
 Describe what your recommender is designed to do and who it is for. 
-
 - What kind of recommendations does it generate  
 The recommender generates a ranked list of songs from a small fixed catalog, scored by how closely each song's features match a hand-written user preference dictionary. Every recommendation comes with a numerical score out of 10 and a bullet-point explanation of exactly which features matched or mismatched. It does not learn, does not remember past sessions, and does not adapt — every run produces the same output for the same input.
 
 - What assumptions does it make about the user  
-Before hearing any music, the user knows and can articulate their preferences in advance — genre, mood, energy level, acoustic preference, and tempo. 
+- Before hearing any music, the user knows and can articulate their preferences in advance — genre, mood, energy level, acoustic preference, and tempo. 
 
-User preferences are stable and do not change mid-session. 
+- User preferences are stable and do not change mid-session. 
 
-One mood and one genre fully describe what the user wants right now, with no room for "it depends" or mixed feelings. 
+- One mood and one genre fully describe what the user wants right now, with no room for "it depends" or mixed feelings. 
 
-The user cares about features in a fixed priority order (mood and genre above energy, energy above acousticness) regardless of context. 
+- The user cares about features in a fixed priority order (mood and genre above energy, energy above acousticness) regardless of context. 
 
-The user's taste fits neatly into the labels available in the catalog — if you want something that sits between "chill" and "relaxed," the system has no way to represent that.
+- The user's taste fits neatly into the labels available in the catalog — if you want something that sits between "chill" and "relaxed," the system has no way to represent that.
 
 - Is this for real users or classroom exploration  
 This is strictly for classroom exploration. A real production system would learn weights from millions of listening events rather than hand-coding them, would update the user profile continuously from behavior like skips and replays, would operate on a catalog of millions of songs rather than 18, and would never ask a user to type in their preferred energy level as a float between 0 and 1. The value of this system is not what it recommends — it is that every decision is visible and traceable, which makes it a useful teaching tool for understanding how scoring, weighting, and ranking work before studying the black-box models that real platforms use.
@@ -94,24 +92,31 @@ Scoring Rule (Max Score = 8.3)
 
 Describe the dataset the model uses.  
 
-Prompts:  
-
 - How many songs are in the catalog  
-- What genres or moods are represented  
-- Did you add or remove data  
-- Are there parts of musical taste missing in the dataset  
+There are exactly 18 songs in the catalog (numbered 1 to 18). 
 
+- What genres or moods are represented  
+The catalog is quite diverse for its size. It includes 15 genres (such as pop, lofi, rock, jazz, soul, and trap) and 14 different moods (including happy, chill, intense, lonely, and energetic).
+
+- Did you add or remove data  
+Yes, eight additional songs were added to the original list of ten, bringing the total catalog to 18 songs
+
+- Are there parts of musical taste missing in the dataset  
+Yes, several common tastes are missing. For example, there is no Classical, Country, Metal, or K-Pop. In terms of moods, there aren't any truly "Sad" or "Angry" songs. It is also missing very old music (like 1950s Swing) or extremely heavy electronic music like Dubstep.
 ---
 
 ## 5. Strengths  
 
-Where does your system seem to work well  
-
-Prompts:  
+Where does your system seem to work well   
 
 - User types for which it gives reasonable results  
+Users with clear, specific preferences — a defined genre, a single mood, and a target energy — get the most reliable results. Profiles like Late Night Study (lofi, focused, low energy) and Sunday Morning (bossa nova, dreamy, low energy) produced confident top picks above 9/10 because all five features aligned tightly with songs in the catalog.
+
 - Any patterns you think your scoring captures correctly  
+The genre similarity matrix correctly handles related-genre users. A k-pop listener gets pop recommendations with partial credit rather than a blanket penalty, which feels more realistic than a binary match. The Gaussian kernel for energy also captures the intuition that "close enough" matters — a song at energy 0.85 for a user targeting 0.92 scores high, not zero.
+
 - Cases where the recommendations matched your intuition  
+Gym Session's #1 pick (a high-energy, intense pop song at 9.9/10) and Late Night Study's #1 (a quiet, focused lofi track at 9.2/10) both felt immediately correct. The large score gap between #1 and #2 in those profiles also matched intuition — when genre, mood, and energy all align, the system is rightfully confident.
 
 ---
 
@@ -119,44 +124,76 @@ Prompts:
 
 Where the system struggles or behaves unfairly. 
 
-Prompts:  
+The system struggles with users who prefer mid-range energy (not too calm, not too intense) because most songs in the catalog cluster at the extremes — very high or very low energy — so the math never finds a close match for them. 
 
-- Features it does not consider  
-- Genres or moods that are underrepresented  
-- Cases where the system overfits to one preference  
-- Ways the scoring might unintentionally favor some users  
+Mood is treated as all-or-nothing, meaning "chill" and "relaxed" are considered completely different even though in real life they feel almost the same, so a user gets penalized unfairly for near-matches. 
 
-The system struggles with users who prefer mid-range energy (not too calm, not too intense) because most songs in the catalog cluster at the extremes — very high or very low energy — so the math never finds a close match for them. Mood is treated as all-or-nothing, meaning "chill" and "relaxed" are considered completely different even though in real life they feel almost the same, so a user gets penalized unfairly for near-matches. The acoustic preference is forced into a yes-or-no choice, which ignores users who enjoy a mix of both acoustic and electronic sounds. The genre similarity map was written by hand, so genres like reggae, latin, and classical have fewer connections than pop or rock — fans of those genres get harsher penalties even when a reasonable alternative exists. When a user skips optional preferences like tempo or acousticness, their scores look artificially high on the 0–10 scale, making weak recommendations appear more confident than they actually are. Finally, users with a rare combination — like blues and sad — get hit with multiple penalties at once, leaving the system with almost no signal to rank songs, so the bottom results are essentially random.
+The acoustic preference is forced into a yes-or-no choice, which ignores users who enjoy a mix of both acoustic and electronic sounds. 
+
+The genre similarity map was written by hand, so genres like reggae, latin, and classical have fewer connections than pop or rock — fans of those genres get harsher penalties even when a reasonable alternative exists. 
+
+
+When a user skips optional preferences like tempo or acousticness, their scores look artificially high on the 0–10 scale, making weak recommendations appear more confident than they actually are. Finally, users with a rare combination — like blues and sad — get hit with multiple penalties at once, leaving the system with almost no signal to rank songs, so the bottom results are essentially random.
 ---
 
 ## 7. Evaluation  
 
-How you checked whether the recommender behaved as expected. 
+How you checked whether the recommender behaved as expected.
 
-Prompts:  
+- Which user profiles you tested
 
-- Which user profiles you tested  
-##### Regular profiles:
-1. Gym Session — pop, intense, energy 0.92, no acoustic, 135 BPM
-2. Late Night Study — lofi, focused, energy 0.38, acoustic, 78 BPM
-3. Sunday Morning — bossa nova, dreamy, energy 0.30, acoustic, 75 BPM
-4. Road Trip — rock, energetic, energy 0.88, no acoustic, 150 BPM
+The system is stress tested against four diverse user profiles:
 
-##### Edge case / adversarial profiles:
-5. High Energy + Sad Mood — blues, sad, energy 0.90 — tests conflicting signals where energy and mood point at completely different songs
-6. Unknown Genre (k-pop) — k-pop, happy, energy 0.75 — tests graceful degradation when genre doesn't exist in the catalog
-7. Ambiguous Energy (0.5) — jazz, relaxed, energy 0.50, no acousticness, no tempo — tests what happens when continuous features give no useful signal
-8. Acoustic + High Energy — folk, uplifting, energy 0.92, acoustic — tests contradictory preferences where no song in the catalog satisfies both
+Gym Profile
+![Gym profile](images/gym-profile.PNG)
+The Gym Hero scores 7.98/8.0, nearly perfect. All five features align. The 3 BPM gap (135 target vs 132 actual) barely costs anything.
+
+Late night study profile
+![Late night study](images/late-night-study.PNG)
+The Focus Flow scores 7.67 despite acousticness only partially matching (0.78 vs target 1.0). The Gaussian partial credit keeps it ranked above zero on that feature.
+
+Road Trip profile
+![Road Trip](images/road-trip.PNG)
+An interesting failure case: Fuego Nights (latin) ranks #1 over Storm Runner (rock, genre match) because mood "energetic" (+2.5) outweighs genre (+2.0). This is the new weight hierarchy doing its job.
+
+Sunday Morning profile
+![Sunday Morning](images/sunday-morning.PNG)
+The Café Saudade scores 7.97/8.0. Demonstrates genre + mood both matching a niche profile. #2 and #3 score only 3.3 — a wide gap, showing the profile is specific enough to clearly separate results.
+
+The recommnder is also tested against edge cases
+
+Acoustic and high Energy
+Tested for contradictory preferences(Folk, uplifting, energy 0.92, acoustic) where no song in the catalog satisfies both.
+![Acoustic High Energy](images/edge-acoustic-high-energy.PNG) 
+The current catalog contains no high-energy acoustic songs, as all acoustic tracks have energy levels below 0.45. This creates a conflict where the user's preferences point to opposite ends of the dataset, resulting in weak, nearly tied scores( 2.7, 2.6, 2.6) and genre mismatches. This scenario represents the system's hardest case(a situation where the user's requirements are mathematically impossible to satisfy using the current data), highlighting the need for either a much larger catalog or a "no match found" notification to handle contradictory search criteria effectively.
+
+
+High energy and sad mood
+Tested conflicting signals where energy and mood point at completely different songs.
+![High Energy Sad](images/edge-high-energy-sad-mood.PNG)
+sad doesn't exist in the catalog at all, so mood scores 0 for every song. The system falls back to ranking by energy + acousticness alone. Top scores hover around 3.7/10 — low but not zero. Therefore, When a user requests a mood not present in the catalog, the system fails silently by providing poor recommendations without triggering an error.
+
+
+Ambigious Energy
+Jazz, relaxed, energy 0.50, no acousticness, no tempo — tests what happens when continuous features give no useful signal
+
+![Ambigious Energy](images/edge-ambigious-energy.PNG)
+The mid-point energy(0.5) with no acousticness or tempo preference. Coffee Shop Stories (jazz, relaxed) wins at 7.5/10 because genre + mood binary matches dominate completely. #2 and #3 score only 2.1 and 1.9. The binary features(genre and mood) rescue the system when continuous features give no useful signal. This is the intended behavior, but it also means energy=0.5 is essentially a wasted preference.
+
+Unknown Genre
+k-pop, happy, energy 0.75 — tests graceful degradation when genre doesn't exist in the catalog.
+![Unknown Genre](images/edge-unknown-genre.PNG)
+Every song takes the -0.5 mismatch penalty, but mood still fires. Sunrise City ranks #1 at 6.1/10 purely through mood matches (happy) +2.5 + energy + tempo. Thus,the system degrades gracefully. It uses whatever signal it can find rather than returning nothing.
 
 - What you looked for in the recommendations  
 1. Does the #1 result feel obviously right?
-The top song should match genre and mood. If it doesn't , for eexample, a jazz song appearing first for a pop user , the weights are broken. For well-formed profiles like Gym Session and Sunday Morning, the #1 song scored 9.9/10 with all five features aligned, which is the expected behavior.
+The top song should match genre and mood. If it doesn't , for example, a jazz song appearing first for a pop user , the weights are broken. For well-formed profiles like Gym Session and Sunday Morning, the #1 song scored 9.9/10 with all five features aligned, which is the expected behavior.
 
 2. Is there a meaningful gap between #1 and #2?
 A good recommender should be confident about its top pick. Gym Hero at 9.9 vs Storm Runner at 6.5 is a healthy gap — the system is sure. Road Trip's #1 and #2 were 6.6 vs 5.5 — much closer, meaning the system was less certain, which is honest given that no song perfectly matched rock + energetic.
 
 3. Do the reasons actually explain the score?
-Each bullet point contribution should add up visibly to the total. This caught the earlier bug where the displayed / 8.0 cap was wrong — scores were exceeding it, which exposed that the denominator was stale.
+Each bullet point contribution should add up visibly to the total. The score is normalized as `(score / active_weight) * 10`, where `active_weight` is computed dynamically — only counting weights for features the user actually provided. This keeps the 0–10 scale fair even when optional fields like tempo or acousticness are skipped. The theoretical max raw score is 8.3 (all five features active).
 
 4. Do edge cases degrade gracefully or break silently?
 For Unknown Genre (k-pop), I looked for whether the system still returned sensible songs using mood and energy alone rather than crashing or returning nothing. It did — pop songs surfaced through the similarity matrix. For High Energy + Sad Mood, I checked whether the double penalty left any meaningful ranking signal, and it largely didn't — all top scores clustered around 3.5–3.7/10 with near-identical reasons.
@@ -183,9 +220,6 @@ The genre similarity matrix gave pop a 0.8 similarity to k-pop (+2.00), mood mat
 
 With energy=0.5 and no acousticness or tempo preference, I expected the results to be messy and close together. Instead Coffee Shop Stories dominated at 9.2/10 purely because it had both genre (jazz) and mood (relaxed) exact matches. The #2 song scored only 2.7/10. That is a gap of 6.5 points — the largest gap across all profiles tested. The surprise was how completely binary features can rescue a profile when continuous features are useless, and equally how catastrophically everything else falls off when the binary features don't fire.
 
-- Any simple tests or comparisons you ran  
-
-No need for numeric metrics unless you created some.
 
 ---
 
@@ -193,21 +227,10 @@ No need for numeric metrics unless you created some.
 
 Ideas for how you would improve the model next.  
 
-Prompts:  
-
-- Additional features or preferences  
-- Better ways to explain recommendations  
-- Improving diversity among the top results  
-- Handling more complex user tastes  
-
+The system should be improved by expanding the catalog with more diverse tracks that cover a wider range of the primary scoring features. Additionally, the model could incorporate secondary features as 'fallback' signals when the five main criteria fail to produce a high-confidence score. As the dataset grows, it is crucial to re-evaluate the feature weights and conduct rigorous testing against diverse user profiles and edge cases to ensure the system handles conflicting or missing data effectively.
 ---
 
-## 9. Personal Reflection  
+## 9. Personal Reflection 
+Through this project, I learned the fundamental mechanics of how recommendation systems function. I discovered that while mathematical models are essential, the system’s performance improves significantly as the catalog expands; therefore, a large dataset is critical for a high-quality user experience.
 
-A few sentences about your experience.  
-
-Prompts:  
-
-- What you learned about recommender systems  
-- Something unexpected or interesting you discovered  
-- How this changed the way you think about music recommendation apps  
+This simulation also highlighted the key differences between a basic content-based model and complex, real-world systems. Building this project helped me understand the concepts used by major tech companies and clarified why they are so determined to collect data from millions of users to refine their algorithms.

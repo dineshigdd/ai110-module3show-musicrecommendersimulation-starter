@@ -173,48 +173,48 @@ k-pop, happy, energy 0.75 — tests graceful degradation when genre doesn't exis
 Every song takes the -0.5 mismatch penalty, but mood still fires. Sunrise City ranks #1 at 6.1/10 purely through mood matches (happy) +2.5 + energy + tempo. Thus,the system degrades gracefully. It uses whatever signal it can find rather than returning nothing.  
 
 - What you looked for in the recommendations  
-1. Does the #1 result feel obviously right?
-The top song should match genre and mood. If it doesn't , for example, a jazz song appearing first for a pop user , the weights are broken. For well-formed profiles like Gym Session and Sunday Morning, the #1 song scored 9.9/10 with all five features aligned, which is the expected behavior.
+    1. Does the #1 result feel obviously right?
+    The top song should match genre and mood. If it doesn't , for example, a jazz song appearing first for a pop user , the weights are broken. For well-formed profiles like Gym Session and Sunday Morning, the #1 song scored 9.9/10 with all five features aligned, which is the expected behavior.
 
-2. Is there a meaningful gap between #1 and #2?
-A good recommender should be confident about its top pick. Gym Hero at 9.9 vs Storm Runner at 6.5 is a healthy gap — the system is sure. Road Trip's #1 and #2 were 6.6 vs 5.5 — much closer, meaning the system was less certain, which is honest given that no song perfectly matched rock + energetic.
+    2. Is there a meaningful gap between #1 and #2?
+    A good recommender should be confident about its top pick. Gym Hero at 9.9 vs Storm Runner at 6.5 is a healthy gap — the system is sure. Road Trip's #1 and #2 were 6.6 vs 5.5 — much closer, meaning the system was less certain, which is honest given that no song perfectly matched rock + energetic.
 
-3. Do the reasons actually explain the score?
-Each bullet point contribution should add up visibly to the total. The score is normalized as `(score / active_weight) * 10`, where `active_weight` is computed dynamically — only counting weights for features the user actually provided. This keeps the 0–10 scale fair even when optional fields like tempo or acousticness are skipped. The theoretical max raw score is 8.3 (all five features active).
+    3. Do the reasons actually explain the score?
+    Each bullet point contribution should add up visibly to the total. The score is normalized as `(score / active_weight) * 10`, where `active_weight` is computed dynamically — only counting weights for features the user actually provided. This keeps the 0–10 scale fair even when optional fields like tempo or acousticness are skipped. The theoretical max raw score is 8.3 (all five features active).
 
-4. Do edge cases degrade gracefully or break silently?
-For Unknown Genre (k-pop), I looked for whether the system still returned sensible songs using mood and energy alone rather than crashing or returning nothing. It did — pop songs surfaced through the similarity matrix. For High Energy + Sad Mood, I checked whether the double penalty left any meaningful ranking signal, and it largely didn't — all top scores clustered around 3.5–3.7/10 with near-identical reasons.
+    4. Do edge cases degrade gracefully or break silently?
+    For Unknown Genre (k-pop), I looked for whether the system still returned sensible songs using mood and energy alone rather than crashing or returning nothing. It did — pop songs surfaced through the similarity matrix. For High Energy + Sad Mood, I checked whether the double penalty left any meaningful ranking signal, and it largely didn't — all top scores clustered around 3.5–3.7/10 with near-identical reasons.
 
-5. Does the score scale feel honest?
-A 2.7/10 for Acoustic + High Energy should feel like a weak recommendation, and it does — no song satisfied both constraints. A 9.2/10 for Late Night Study should feel like a strong one, and it does — genre, mood, energy, and tempo all aligned tightly. The normalized scale was checked to make sure it wasn't inflating weak matches into appearing confident.
+    5. Does the score scale feel honest?
+    A 2.7/10 for Acoustic + High Energy should feel like a weak recommendation, and it does — no song satisfied both constraints. A 9.2/10 for Late Night Study should feel like a strong one, and it does — genre, mood, energy, and tempo all aligned tightly. The normalized scale was checked to make sure it wasn't inflating weak matches into appearing confident.
 
 - What surprised you  
-Yes, There are three results.
+    Yes, There are three results.
 
-1. Fuego Nights (latin) beat Storm Runner (rock) for the Road Trip profile
+    1. Fuego Nights (latin) beat Storm Runner (rock) for the Road Trip profile
 
-Road Trip asked for genre=rock. Storm Runner is the only rock song in the catalog. I expected it to rank #1 easily. Instead Fuego Nights (latin) ranked #1 at 6.6/10 vs Storm Runner's 5.5/10. 
+    Road Trip asked for genre=rock. Storm Runner is the only rock song in the catalog. I expected it to rank #1 easily. Instead Fuego Nights (latin) ranked #1 at 6.6/10 vs Storm Runner's 5.5/10. 
 
-The reason: mood match (energetic +2.5) outweighed genre match (+2.5) because Storm Runner took the mood mismatch penalty (intense != energetic -1.0). The system technically did the right thing by the weights, but recommending a latin song to someone who asked for rock would feel wrong to a real user. It exposed that mood weight equaling genre weight is a questionable design decision.
+    The reason: mood match (energetic +2.5) outweighed genre match (+2.5) because Storm Runner took the mood mismatch penalty (intense != energetic -1.0). The system technically did the right thing by the weights, but recommending a latin song to someone who asked for rock would feel wrong to a real user. It exposed that mood weight equaling genre weight is a questionable design decision.
 
-2. Unknown Genre (k-pop) produced the most confident-looking result outside perfect profiles
+    2. Unknown Genre (k-pop) produced the most confident-looking result outside perfect profiles
 
-I expected k-pop to score poorly across the board since it doesn't exist in the catalog. Instead Sunrise City scored 8.6/10 — higher than most regular profile results. 
+    I expected k-pop to score poorly across the board since it doesn't exist in the catalog. Instead Sunrise City scored 8.6/10 — higher than most regular profile results. 
 
-The genre similarity matrix gave pop a 0.8 similarity to k-pop (+2.00), mood matched happy (+2.5), and energy was close. The system was more confident recommending to a k-pop user than to a Road Trip rock user. That felt backwards — the system rewarded a close-enough genre more than it rewarded an exact-but-mood-mismatched genre.
+    The genre similarity matrix gave pop a 0.8 similarity to k-pop (+2.00), mood matched happy (+2.5), and energy was close. The system was more confident recommending to a k-pop user than to a Road Trip rock user. That felt backwards — the system rewarded a close-enough genre more than it rewarded an exact-but-mood-mismatched genre.
 
-3. The Ambiguous Energy profile exposed how binary features completely take over
+    3. The Ambiguous Energy profile exposed how binary features completely take over
 
-With energy=0.5 and no acousticness or tempo preference, I expected the results to be messy and close together. Instead Coffee Shop Stories dominated at 9.2/10 purely because it had both genre (jazz) and mood (relaxed) exact matches. The #2 song scored only 2.7/10. That is a gap of 6.5 points — the largest gap across all profiles tested. The surprise was how completely binary features can rescue a profile when continuous features are useless, and equally how catastrophically everything else falls off when the binary features don't fire.
+    With energy=0.5 and no acousticness or tempo preference, I expected the results to be messy and close together. Instead Coffee Shop Stories dominated at 9.2/10 purely because it had both genre (jazz) and mood (relaxed) exact matches. The #2 song scored only 2.7/10. That is a gap of 6.5 points — the largest gap across all profiles tested. The surprise was how completely binary features can rescue a profile when continuous features are useless, and equally how catastrophically everything else falls off when the binary features don't fire.
 
 
 ---
 
 ## 8. Future Work  
-The system should be improved by expanding the catalog with more diverse tracks that cover a wider range of the primary scoring features. Additionally, the model could incorporate secondary features as 'fallback' signals when the five main criteria fail to produce a high-confidence score. As the dataset grows, it is crucial to re-evaluate the feature weights and conduct rigorous testing against diverse user profiles and edge cases to ensure the system handles conflicting or missing data effectively.
+    The system should be improved by expanding the catalog with more diverse tracks that cover a wider range of the primary scoring features. Additionally, the model could incorporate secondary features as 'fallback' signals when the five main criteria fail to produce a high-confidence score. As the dataset grows, it is crucial to re-evaluate the feature weights and conduct rigorous testing against diverse user profiles and edge cases to ensure the system handles conflicting or missing data effectively.
 ---
 
 ## 9. Personal Reflection 
-Through this project, I learned the fundamental mechanics of how recommendation systems function. I discovered that while mathematical models are essential, the system’s performance improves significantly as the catalog expands; therefore, a large dataset is critical for a high-quality user experience.
+    Through this project, I learned the fundamental mechanics of how recommendation systems function. I discovered that while mathematical models are essential, the system’s performance improves significantly as the catalog expands; therefore, a large dataset is critical for a high-quality user experience.
 
-This simulation also highlighted the key differences between a basic content-based model and complex, real-world systems. Building this project helped me understand the concepts used by major tech companies and clarified why they are so determined to collect data from millions of users to refine their algorithms.
+    This simulation also highlighted the key differences between a basic content-based model and complex, real-world systems. Building this project helped me understand the concepts used by major tech companies and clarified why they are so determined to collect data from millions of users to refine their algorithms.
